@@ -1,0 +1,24 @@
+# Pod gateway
+#   Fixes DNS
+#   Automatic load balance
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  labels:
+    # Application name across the cluster, dashboards (Lens, ArgoCD, Kubernetes Dashboard), and log aggregators
+    app.kubernetes.io/name: order-service
+    # Identifies the higher-level system or portfolio this service belongs to
+    app.kubernetes.io/part-of: platform-delivery-engine
+spec:
+  # allocates a private, stable internal cluster IP
+  type: ClusterIP
+  # Indicates which pod to rout to
+  selector:
+    app: order-service
+  ports:
+    - protocol: TCP
+      # Service port to listen within the cluster
+      port: 80
+      # Pods container port
+      targetPort: 8080

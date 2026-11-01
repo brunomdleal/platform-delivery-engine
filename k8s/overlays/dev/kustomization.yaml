@@ -1,0 +1,17 @@
+# Glues all required files
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Creates a dev namespace (in order to be able to manage without affecting the remaining overlays)
+namespace: dev
+# References the base files
+resources:
+  - ../../base
+# Specifies the path where the overwrite deployment file is
+patches:
+  - path: deployment-patch.yaml
+# Specifies the image to use on the dev pods
+images:
+  # Image repository name
+  - name: ghcr.io/brunomdleal/order-service
+    # Image tag to use
+    newTag: 0.0.4

@@ -1,0 +1,34 @@
+# Dev Pod
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  # Matches the name from the base deployment.yaml file
+  name: order-service
+spec:
+  # Desired dev pods
+  replicas: 1
+  # Pod (Replica) blueprint
+  template:
+    spec:
+      # Pod-level security
+      containers:
+        # Uses the container 'order-service'
+        - name: order-service
+          # Adds environment variable
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: dev
+          # Specifies the pod specs
+          resources:
+            # Minimum
+            requests:
+              # 100 millicores (1000m ≃ 1 vCPU/CPU core)
+              cpu: 100m
+              # 256 Mebibytes of ram ≃ 256 Megabytes of ram
+              memory: 256Mi
+            # Maximum
+            limits:
+              # 500 millicores (1000m ≃ 1 vCPU/CPU core)
+              cpu: 500m
+              # 512 Mebibytes of ram ≃ 512 Megabytes of ram
+              memory: 512Mi
