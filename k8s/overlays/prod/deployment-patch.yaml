@@ -1,0 +1,53 @@
+# Prod Pod
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  # Matches the name from the base deployment.yaml file
+  name: order-service
+spec:
+  # Desired prod pods
+  replicas: 3
+  # Pod (Replica) blueprint
+  template:
+    spec:
+      # Pod-level security
+      containers:
+        # Uses the container 'order-service'
+        - name: order-service
+          # Adds environment variable
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: prod
+          # Specifies the pod specs
+          resources:
+            # Minimum
+            requests:
+              # 200 millicores (1000m ≃ 1 vCPU/CPU core)
+              cpu: 200m
+              # 512 Mebibytes of ram ≃ 512 Megabytes of ram
+              memory: 512Mi
+            # Maximum
+            limits:
+              # 1000 millicores (1000m ≃ 1 vCPU/CPU core)
+              cpu: 1000m
+              # 1 Gigibytes of ram ≃ 1 Gigabytes of ram
+              memory: 1Gi
+      affinity:
+        # Makes each pod individual
+        podAntiAffinity:
+          # Enforcement rule (Kubernetes tries its best to spread the Pods, but if only one machine is available,
+          # it still schedules the Pod rather than letting it sit in Pending)
+          preferredDuringSchedulingIgnoredDuringExecution:
+            # Priority score (1 - 100) (Only used in preferred rules. A score from 1 to 100 that gives this preference
+            # a priority weight when multiple scheduling rules compete.)
+            - weight: 100
+              # Target definition (Bundles together which Pods to avoid and what domain to avoid them in.)
+              podAffinityTerm:
+                # Pod filter query
+                # (Standard Kubernetes label selector. Specifies which existing Pods to look for across the cluster.)
+                labelSelector:
+                  matchLabels:
+                    app: order-service
+                # Physical boundary domain (The label on the physical nodes that defines the boundary)
+                # (Setting kubernetes.io/hostname means each physical machine is a separate boundary zone.)
+                topologyKey: kubernetes.io/hostname
