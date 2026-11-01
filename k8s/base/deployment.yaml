@@ -1,40 +1,53 @@
+# Pod blueprint
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: order-service
   labels:
+    # Application name across the cluster, dashboards (Lens, ArgoCD, Kubernetes Dashboard), and log aggregators
     app.kubernetes.io/name: order-service
+    # Identifies the higher-level system or portfolio this service belongs to
     app.kubernetes.io/part-of: platform-delivery-engine
 spec:
-  # Base replica placeholder (patched by overlays)
+  # Desired instance count of replicas (patched by overlays)
   replicas: 1
+  # Identifies witch pods belongs to it
   selector:
     matchLabels:
       app: order-service
+  # Pod (Replica) blueprint
   template:
     metadata:
+      # Pod identifications
       labels:
         app: order-service
     spec:
+      # Pod-level security
       securityContext:
+        # Enforces non-root runtime
         runAsNonRoot: true
+        # Specifies the UID/GID
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
+      # Container Specifications
       containers:
         - name: order-service
           image: ghcr.io/brunomdleal/order-service:placeholder
           imagePullPolicy: IfNotPresent
+          # Port declarations
           ports:
             - containerPort: 8080
               name: http
+          # Container-level security
           securityContext:
             readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
+            # Drops all UNIX capabilities
             capabilities:
               drop:
                 - ALL
-          # Aligned with the Spring Boot Actuator contract verified in Compose
+          # Self-healing health check (Aligned with the Spring Boot Actuator contract verified in Compose)
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
@@ -43,6 +56,7 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 3
+          # Traffic routing gate (Removes the Pod from the Service endpoint pool until it reports 'UP')
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
@@ -51,10 +65,11 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 3
             failureThreshold: 3
-          # Temporary writable scratch space needed by JVM/Alpine with readOnlyRootFilesystem
+          # Filesystem mounts (Temporary writable scratch space needed by JVM/Alpine with readOnlyRootFilesystem)
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+      # Volume definitions (Declares storage volumes available to the pod [e.g., emptyDir: {} for scratch memory/disk])
       volumes:
         - name: tmp
           emptyDir: {}
