@@ -1,0 +1,24 @@
+# PostgreSQL DNS provider
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  labels:
+    # Application name across the cluster, dashboards (Lens, ArgoCD, Kubernetes Dashboard), and log aggregators
+    app.kubernetes.io/name: postgres
+    # Identifies the higher-level system or portfolio this service belongs to
+    app.kubernetes.io/part-of: platform-delivery-engine
+spec:
+  # Restricts network reachability strictly to internal pods inside the Kubernetes cluster
+  type: ClusterIP
+  # Routes inbound traffic arriving at the Service directly to Pods labeled app: postgres
+  selector:
+    app: postgres
+  ports:
+    - name: postgres
+      # Listens
+      port: 5432
+      # Talks
+      targetPort: 5432
+      protocol: TCP
+      

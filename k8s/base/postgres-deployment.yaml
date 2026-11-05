@@ -1,0 +1,102 @@
+# PostgreSQL pod blueprint
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  labels:
+    # Application name across the cluster, dashboards (Lens, ArgoCD, Kubernetes Dashboard), and log aggregators
+    app.kubernetes.io/name: postgres
+    # Identifies the higher-level system or portfolio this service belongs to
+    app.kubernetes.io/part-of: platform-delivery-engine
+spec:
+  # Desired instance count of replicas
+  replicas: 1
+  # Identifies witch pods belongs to it
+  selector:
+    matchLabels:
+      app: postgres
+  # Pod (Replica) blueprint
+  template:
+    metadata:
+      labels:
+        # Pod identifications
+        app: postgres
+    spec:
+      # Container Specifications
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          # Port declarations
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            # Binds POSTGRES_DB key from Terraform-provisioned postgres-credentials Secret
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_DB
+            # Binds POSTGRES_USER key from Terraform-provisioned postgres-credentials Secret
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_USER
+            # Binds POSTGRES_PASSWORD key from Terraform-provisioned postgres-credentials Secret
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_PASSWORD
+            # Maps the Postgres data files to a subdirectory within the mount path
+            # This helps to avoid conflicts with the volume root's lost+found directory
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          # Maps the PVC to a container filesystem path
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+          # Executes `pg_isready` against the container
+          # Restarts the container if the database engine hangs
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          # Traffic routing gate
+          # Removes the Pod from the Service endpoint pool until it is ready to accept connections
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          # Specifies the pod specs
+          resources:
+            # Minimum
+            requests:
+              # 100 millicores (1000m ≃ 1 vCPU/CPU core)
+              cpu: 100m
+              # 128 Mebibytes of ram ≃ 128 Megabytes of ram
+              memory: 128Mi
+            limits:
+              # 500 millicores (1000m ≃ 1 vCPU/CPU core)
+              cpu: 500m
+              # 512 Mebibytes of ram ≃ 512 Megabytes of ram
+              memory: 512Mi
+      # Volume definitions (Declares storage volumes available to the pod [e.g., emptyDir: {} for scratch memory/disk])
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc
