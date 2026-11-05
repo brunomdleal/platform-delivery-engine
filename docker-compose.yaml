@@ -1,15 +1,45 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-orderdb}
+      POSTGRES_USER: ${POSTGRES_USER:-orderuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-orderpass}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # Runs Postgres's native pg_isready utility against the active user and database
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-orderuser} -d ${POSTGRES_DB:-orderdb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   order-service:
     image: ghcr.io/brunomdleal/order-service:${IMAGE_TAG:-0.0.4}
     container_name: order-service
+    restart: unless-stopped
     ports:
       - "${ORDER_SERVICE_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: local
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/order_db}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-orderuser}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-orderpass}
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      # Queries Spring Boot Actuator's health endpoint using wget and confirms JSON contains "status":"UP"
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 20s
-    restart: unless-stopped
+
+volumes:
+  postgres_data:
