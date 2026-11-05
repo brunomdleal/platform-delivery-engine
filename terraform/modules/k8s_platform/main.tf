@@ -60,11 +60,13 @@ resource "kubernetes_secret" "postgres_credentials" {
   # Key-value store containing sensitive configuration
   data = {
     # Maps the database name into the Secret data map
-    POSTGRES_DB       = var.database_name
+    POSTGRES_DB                 = var.database_name
     # Maps the database user into the Secret data map
-    POSTGRES_USER     = var.database_username
+    POSTGRES_USER               = var.database_username
     # Maps the generated password into the Secret data map
-    POSTGRES_PASSWORD = random_password.db_password.result
+    POSTGRES_PASSWORD           = random_password.db_password.result
+    # Maps the database url into the Secret data map
+    POSTGRES_URL       = "jdbc:postgresql://postgres:5432/${var.database_name}"
   }
 
   type = "Opaque"

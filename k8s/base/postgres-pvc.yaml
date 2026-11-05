@@ -1,0 +1,19 @@
+# Disk storage
+apiVersion: v1
+kind: PersistentVolumeClaim #PVC
+metadata:
+  # name for the volume
+  name: postgres-pvc
+  labels:
+    # Application name across the cluster, dashboards (Lens, ArgoCD, Kubernetes Dashboard), and log aggregators
+    app.kubernetes.io/name: postgres
+    # Identifies the higher-level system or portfolio this service belongs to
+    app.kubernetes.io/part-of: platform-delivery-engine
+spec:
+  # Make this volume accessible by a single cluster node at a time
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      # 1 Gigibytes of rom ≃ 1 Gigabytes of rom
+      storage: 1Gi

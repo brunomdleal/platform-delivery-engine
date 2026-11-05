@@ -39,6 +39,25 @@ spec:
           ports:
             - containerPort: 8080
               name: http
+          env:
+            # Binds POSTGRES_USER key from Terraform-provisioned postgres-credentials Secret
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_USER
+            # Binds POSTGRES_PASSWORD key from Terraform-provisioned postgres-credentials Secret
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_PASSWORD
+            # Binds POSTGRES_URL key from Terraform-provisioned postgres-credentials Secret
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_URL
           # Container-level security
           securityContext:
             readOnlyRootFilesystem: true
