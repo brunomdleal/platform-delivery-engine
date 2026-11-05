@@ -20,7 +20,7 @@ services:
       start_period: 10s
 
   order-service:
-    image: ghcr.io/brunomdleal/order-service:${IMAGE_TAG:-0.0.4}
+    image: ghcr.io/brunomdleal/order-service:${IMAGE_TAG:-0.1.16}
     container_name: order-service
     restart: unless-stopped
     ports:
