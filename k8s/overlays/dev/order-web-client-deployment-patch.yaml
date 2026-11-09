@@ -1,0 +1,30 @@
+# Dev Pod - Frontend
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  # Matches the name from the base deployment.yaml file
+  name: order-web-client
+spec:
+  # Desired dev pods
+  replicas: 1
+  # Pod (Replica) blueprint
+  template:
+    spec:
+      # Pod-level security
+      containers:
+        # Uses the container 'order-web-client'
+        - name: order-web-client
+          # Specifies the pod specs
+          resources:
+            # Minimum
+            requests:
+              # 50 millicores (1000m ≃ 1 vCPU/CPU core)
+              cpu: 50m
+              # 64 Mebibytes of ram ≃ 64 Megabytes of ram
+              memory: 64Mi
+            # Maximum
+            limits:
+              # 200 millicores (1000m ≃ 1 vCPU/CPU core)
+              cpu: 200m
+              # 128 Mebibytes of ram ≃ 128 Megabytes of ram
+              memory: 128Mi

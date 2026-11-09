@@ -9,9 +9,15 @@ resources:
 # Specifies the path where the overwrite deployment file is
 patches:
   - path: deployment-patch.yaml
+  - path: order-web-client-deployment-patch.yaml
+  - path: ingress-patch.yaml
 # Specifies the image to use on the dev pods
 images:
   # Image repository name
   - name: ghcr.io/brunomdleal/order-service
+    # Image tag to use
+    newTag: latest
+  # Image repository name
+  - name: ghcr.io/brunomdleal/order-web-client
     # Image tag to use
     newTag: latest
