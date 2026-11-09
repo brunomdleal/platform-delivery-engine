@@ -19,7 +19,7 @@ spec:
             # Minimum
             requests:
               # 100m millicores (1000m ≃ 1 vCPU/CPU core)
-              cpu: 100mm
+              cpu: 100m
               # 128 Mebibytes of ram ≃ 128 Megabytes of ram
               memory: 128Mi
             # Maximum
