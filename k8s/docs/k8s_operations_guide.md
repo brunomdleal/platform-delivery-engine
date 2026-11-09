@@ -36,10 +36,10 @@ Step 2.2: Load Container Images (Offline / WSL Workaround)
 If external image pull timeouts occur due to Docker daemon WSL networking constraints ("bridge": "none" / "iptables": false), ensure the target image exists in your host Docker cache, then load it directly into the Minikube node:
 
 # Tag the local build to match the Kustomize image coordinate
-docker tag order-service:local ghcr.io/brunomdleal/order-service:0.1.16
+docker tag order-service:local ghcr.io/brunomdleal/order-service:latest
 
 # Load into Minikube internal container storage
-minikube image load ghcr.io/brunomdleal/order-service:0.1.16
+minikube image load ghcr.io/brunomdleal/order-service:latest
 
 
 Verify the image is present in Minikube's local cache:

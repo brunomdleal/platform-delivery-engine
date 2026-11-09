@@ -1,7 +1,7 @@
 variable "image_tag" {
   description = "Docker image tag for services in local Compose"
   type        = string
-  default     = "0.1.16"
+  default     = "latest"
 }
 
 variable "order_service_port" {

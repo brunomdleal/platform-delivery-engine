@@ -14,4 +14,4 @@ images:
   # Image repository name
   - name: ghcr.io/brunomdleal/order-service
     # Image tag to use
-    newTag: 0.1.16
+    newTag: latest
