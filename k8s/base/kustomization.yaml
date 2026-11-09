@@ -5,6 +5,8 @@ kind: Kustomization
 resources:
   - deployment.yaml
   - service.yaml
+  - order-web-client-deployment.yaml
+  - order-web-client-service.yaml
   - postgres-pvc.yaml
   - postgres-deployment.yaml
   - postgres-service.yaml

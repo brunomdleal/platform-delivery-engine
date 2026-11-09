@@ -1,0 +1,65 @@
+# Pod blueprint
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-web-client
+  labels:
+    # Application name across the cluster, dashboards (Lens, ArgoCD, Kubernetes Dashboard), and log aggregators
+    app.kubernetes.io/name: order-web-client
+    # Identifies the higher-level system or portfolio this service belongs to
+    app.kubernetes.io/part-of: platform-delivery-engine
+spec:
+  # Desired instance count of replicas (patched by overlays)
+  replicas: 1
+  # Identifies witch pods belongs to it
+  selector:
+    matchLabels:
+      app: order-web-client
+  # Pod (Replica) blueprint
+  template:
+    metadata:
+      # Pod identifications
+      labels:
+        app: order-web-client
+    spec:
+      # Pod-level security
+      securityContext:
+        # Enforces non-root runtime
+        runAsNonRoot: true
+        # Alpine nginx user UID/GID is 101
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+      # Container Specifications
+      containers:
+        - name: order-web-client
+          image: ghcr.io/brunomdleal/order-web-client:placeholder
+          imagePullPolicy: IfNotPresent
+          # Port declarations
+          ports:
+            - containerPort: 8080
+              name: http
+          # Container-level security
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            # Drops all UNIX capabilities
+            capabilities:
+              drop:
+                - ALL
+          # Filesystem mounts (Temporary writable scratch space needed by JVM/Alpine with readOnlyRootFilesystem)
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-run
+              mountPath: /var/run
+      # Volume definitions (Declares storage volumes available to the pod [e.g., emptyDir: {} for scratch memory/disk])
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-run
+          emptyDir: {}
