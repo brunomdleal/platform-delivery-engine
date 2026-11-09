@@ -1,0 +1,29 @@
+# API Group & Version
+apiVersion: networking.k8s.io/v1
+# Defines external HTTP/S routing rules into cluster services
+kind: Ingress
+metadata:
+  name: order-ingress
+spec:
+  rules:
+    - host: prod.order.local
+      http:
+        paths:
+          # Backend API routing
+          # Intercepts all requests beginning with /api (e.g., /api/v1/orders)
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: order-service
+                port:
+                  number: 80
+          # Frontend SPA routing
+          # Intercepts all remaining requests
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: order-web-client
+                port:
+                  number: 80

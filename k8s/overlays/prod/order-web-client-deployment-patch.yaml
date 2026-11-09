@@ -1,0 +1,49 @@
+# Prod Pod - Frontend
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  # Matches the name from the base deployment.yaml file
+  name: order-web-client
+spec:
+  # Desired prod pods
+  replicas: 2
+  # Pod (Replica) blueprint
+  template:
+    spec:
+      # Pod-level security
+      containers:
+        # Uses the container 'order-web-client'
+        - name: order-web-client
+          # Specifies the pod specs
+          resources:
+            # Minimum
+            requests:
+              # 100m millicores (1000m ≃ 1 vCPU/CPU core)
+              cpu: 100mm
+              # 128 Mebibytes of ram ≃ 128 Megabytes of ram
+              memory: 128Mi
+            # Maximum
+            limits:
+              # 500 millicores (1000m ≃ 1 vCPU/CPU core)
+              cpu: 500m
+              # 256 Mebibytes of ram ≃ 256 Megabytes of ram
+              memory: 256Mi
+      affinity:
+        # Makes each pod individual
+        podAntiAffinity:
+          # Enforcement rule (Kubernetes tries its best to spread the Pods, but if only one machine is available,
+          # it still schedules the Pod rather than letting it sit in Pending)
+          preferredDuringSchedulingIgnoredDuringExecution:
+            # Priority score (1 - 100) (Only used in preferred rules. A score from 1 to 100 that gives this preference
+            # a priority weight when multiple scheduling rules compete.)
+            - weight: 100
+              # Target definition (Bundles together which Pods to avoid and what domain to avoid them in.)
+              podAffinityTerm:
+                # Pod filter query
+                # (Standard Kubernetes label selector. Specifies which existing Pods to look for across the cluster.)
+                labelSelector:
+                  matchLabels:
+                    app: order-web-client
+                # Physical boundary domain (The label on the physical nodes that defines the boundary)
+                # (Setting kubernetes.io/hostname means each physical machine is a separate boundary zone.)
+                topologyKey: kubernetes.io/hostname
