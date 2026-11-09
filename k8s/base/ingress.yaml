@@ -23,7 +23,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: order-ingress
+                name: order-service
                 port:
                   number: 80
           # Frontend SPA routing
