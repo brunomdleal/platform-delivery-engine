@@ -9,11 +9,11 @@ metadata:
     app.kubernetes.io/part-of: platform-delivery-engine
   # Configures the underlying Nginx Ingress Controller running in the cluster.
   annotations:
-    # Uses standard ingress-nginx controller
-    kubernetes.io/ingress.class: nginx
     # Sends original host header and preserves client IP
     nginx.ingress.kubernetes.io/proxy-set-headers: "true"
 spec:
+  # Uses standard ingress-nginx controller
+  ingressClassName: nginx
   rules:
     - http:
         paths:
