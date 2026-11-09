@@ -1,121 +1,152 @@
 # Enterprise Platform Delivery Engine
 
-[![CI Delivery Conveyor](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF.svg)](#pipeline-architecture)
-[![Infrastructure as Code](https://img.shields.io/badge/IaC-Terraform%201.15+-7B42BC.svg)](#infrastructure-as-code-terraform)
-[![Container Hardening](https://img.shields.io/badge/Docker-Multi--Stage%20Build-2496ED.svg)](#containerization--security-posture)
-[![Vulnerability Audit](https://img.shields.io/badge/Security-Trivy%20CVE%20Scan-FF6A00.svg)](#pipeline-architecture)
-[![Registry Distribution](https://img.shields.io/badge/Registry-GHCR-181717.svg)](#pipeline-architecture)
+[![Infrastructure as Code](https://img.shields.io/badge/IaC-Terraform%20v1.15+-7B42BC.svg)](#infrastructure-as-code-terraform)
+[![Kubernetes Ingress](https://img.shields.io/badge/Ingress-Nginx-009639.svg)](#ingress--edge-routing-architecture)
+[![Orchestration](https://img.shields.io/badge/Orchestration-Kustomize%20%7C%20Compose-326CE5.svg)](#multi-environment-deployment-specification)
+[![Container Packaging](https://img.shields.io/badge/Docker-Multi--Stage%20Build-2496ED.svg)](#containerization--security-posture)
+[![Security Gates](https://img.shields.io/badge/Security-Trivy%200--CVE-FF6A00.svg)](#containerization--security-posture)
+[![Registry Distribution](https://img.shields.io/badge/Registry-GHCR-181717.svg)](#architecture--delivery-flow)
 
-An automated delivery conveyor belt, container packaging engine, and multi-environment deployment blueprint designed to
-decouple enterprise delivery engineering from raw application source code.
+An automated delivery conveyor belt, container packaging engine, and multi-environment deployment blueprint designed to decouple enterprise delivery engineering from raw application source code.
 
-This repository serves as the **Platform Engineering** layer: it provisions foundational Kubernetes substrate and
-cryptographic secrets via Terraform, ingests application source repositories, enforces shift-left security gates,
-produces hardened container images, and orchestrates target runtime environments.
+This repository serves as the central **Platform Engineering** and **Developer Experience (DevEx)** substrate: it provisions isolated runtime environments via Terraform, enforces declarative Kubernetes configurations through Kustomize overlays, manages persistent database state, coordinates edge ingress path routing, and guarantees environment parity with Docker Compose.
 
 ---
 
 ## Architecture & Delivery Flow
 
-The platform separates foundational cluster infrastructure from continuous application delivery:
+The platform delivery engine coordinates upstream microservices and client applications into a unified, observable runtime environment:
 
 ```text
-                  [Infrastructure Substrate (Terraform)]
-                                    │
-          ┌─────────────────────────┴─────────────────────────┐
-          ▼                                                   ▼
-   [Namespaces: dev & prod]                     [Cryptographic DB Secrets]
-          │                                                   │
-          └─────────────────────────┬─────────────────────────┘
-                                    │
-                                    ▼
-[Upstream: order-service] ──────────┼───> [GitHub Actions CI Conveyor]
-                                    │        ├─ Gate 1: Code Linting & Static Check
-                                    │        ├─ Gate 2: Automated Unit & Integration Tests (Maven)
-                                    │        ├─ Gate 3: Hardened Multi-Stage Build (Eclipse Temurin JRE)
-                                    │        └─ Gate 4: Trivy Security Scan (Block High/Critical CVEs)
-                                    │
-                                    ▼ (Passed Scan)
-                         [Artifact Registry (GHCR)]
-                                    │
-                                    ▼
-                         [Runtime Orchestration]
-                            ├─ dev  (1 Replica, Lightweight, Internal Routing)
-                            └─ prod (3 Replicas, Load-Balanced, Health & Liveness Probes)
+ ┌─────────────────────────┐               ┌─────────────────────────┐
+ │   order-service (API)   │               │ order-web-client (SPA)  │
+ │  • Java 21 / Spring 4   │               │  • React / TypeScript   │
+ │  • Flyway + Postgres    │               │  • Vite + Static Nginx  │
+ └───────────┬─────────────┘               └────────────┬────────────┘
+             │                                          │
+             ▼ (CI Packaging & Trivy CVE Scan)          ▼ (CI Packaging & Hardening)
+ ┌───────────────────────────────────────────────────────────────────┐
+ │               GitHub Container Registry (GHCR)                    │
+ └───────────────────────────────┬───────────────────────────────────┘
+                                 │
+                                 ▼ (Pulled into runtime)
+ ┌───────────────────────────────────────────────────────────────────┐
+ │                   Platform Delivery Substrate                     │
+ │                                                                   │
+ │  [IaC Layer: Terraform]                                           │
+ │   • Provisions Namespaces (`dev`, `prod`)                         │
+ │   • Generates cryptographically secure credentials                │
+ │   • Seeds Kubernetes Secrets & generates root `.env` for Compose  │
+ │                                                                   │
+ │  [Edge Gateway: Nginx Ingress Controller]                         │
+ │   • Host: dev.order.local                                         │
+ │   • Path `/`    ──► order-web-client (SPA static files on :8080)  │
+ │   • Path `/api` ──► order-service (REST API on :8080)             │
+ │                                                                   │
+ │  [Data Persistence]                                               │
+ │   • PostgreSQL 16 + Bound PersistentVolumeClaim (PVC)             │
+ └───────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Infrastructure as Code (Terraform)
+## Ingress & Edge Routing Architecture
 
-Platform substrate is declaratively provisioned through modular Terraform configurations, ensuring complete environment isolation and zero manual cluster bootstrapping.
+All external traffic routes through a unified Nginx Ingress Controller (`order-ingress`). Upstream client containers serve purely static SPA assets with client-side fallback, while the API handles JSON lifecycle operations.
 
-### Key Capabilities
+| Host Header | Path Prefix | Target Service | Container Port | Protocol / Behavior |
+| :--- | :--- | :--- | :--- | :--- |
+| `dev.order.local` | `/` | `order-web-client` | `8080` (HTTP) | Single Page Application (`index.html` fallback, cache-control) |
+| `dev.order.local` | `/api` | `order-service` | `8080` (HTTP) | REST API microservice endpoints (`/api/v1/orders`) |
+| `dev.order.local` | Internal | `postgres` | `5432` (TCP) | Cluster-internal PostgreSQL relational database |
 
-- **Modular Platform Abstraction (`modules/k8s_platform`):** Standardized module provisioning isolated Kubernetes namespaces (`dev`, `prod`), resource tagging (`app.kubernetes.io/managed-by`), and environment boundaries.
-- **Cryptographic Credential Generation:** Employs `hashicorp/random` to provision cryptographically secure 24-character database credentials directly into Kubernetes `Opaque` secrets without clear-text exposure.
-- **Docker Compose Synchronization:** The local environment root (`environments/local`) automatically renders and exports a restricted-permission (`0600`) root `.env` file, keeping local Docker Compose and Kubernetes credentials strictly in sync.
+---
 
-### Provisioning Platform Foundations
+## Multi-Environment Deployment Specification
+
+| Dimension | Dev Environment (`namespace: dev`) | Prod Environment (`namespace: prod`) |
+| :--- | :--- | :--- |
+| **Provisioning** | Terraform (`k8s_platform` module) | Terraform (`k8s_platform` module) |
+| **Replication (`order-service`)** | 1 Pod (lean resource consumption) | 3 Pods (high availability, anti-affinity) |
+| **Replication (`order-web-client`)**| 1 Pod (lean developer profile) | 2 Pods (redundant static edge) |
+| **Edge Routing** | Nginx Ingress (`dev.order.local`) | Nginx Ingress (`prod.order.local`) |
+| **Resource Limits (API)** | `500m` CPU / `512Mi` RAM | `1000m` CPU / `1Gi` RAM |
+| **Resource Limits (Web)** | `200m` CPU / `128Mi` RAM | `500m` CPU / `256Mi` RAM |
+| **Persistence** | PostgreSQL 16 (`1Gi` ReadWriteOnce PVC) | PostgreSQL 16 (`10Gi` PVC + Backup storage) |
+| **Telemetry & Probes** | Actuator Liveness & Readiness | Actuator Probes + Pod disruption budget |
+
+---
+
+## Local Runtime Orchestration
+
+### Option A: Kubernetes Cluster (Minikube)
+
+#### 1. Start Cluster and Enable Ingress
+```bash
+minikube start --driver=docker --ports=8443:8443
+minikube addons enable ingress
+```
+
+#### 2. Provision Infrastructure Substrate via Terraform
+Provisions the `dev` and `prod` namespaces, generates database credentials, and seeds the `postgres-credentials` Secrets:
+```bash
+cd terraform/environments/local
+terraform init
+terraform apply -auto-approve
+cd ../../..
+```
+
+#### 3. Deploy Application Stack via Kustomize
+```bash
+kubectl apply -k k8s/overlays/dev
+```
+
+#### 4. Map Local Hostname & Verify
+Add the Minikube IP entry to your `/etc/hosts` file:
+```bash
+echo "$(minikube ip) dev.order.local" | sudo tee -a /etc/hosts
+```
+
+Verify endpoints through Ingress:
+```bash
+# Frontend SPA check:
+curl -i http://dev.order.local/
+
+# Backend REST API check:
+curl -i http://dev.order.local/api/v1/orders
+```
+
+---
+
+### Option B: Local Docker Compose (One-Command Stack)
+
+Ensure Terraform has provisioned the baseline `.env` configuration file in the project root:
 
 ```bash
-# Navigate to the local environment root
-cd terraform/environments/local
+# 1. Start all services in the background
+docker compose up -d
 
-# Initialize provider plugins (Kubernetes, Random, Local)
-terraform init
+# 2. Check health status
+docker compose ps
 
-# Validate execution plan
-terraform plan
+# 3. Verify endpoints
+curl -i http://localhost:8080/actuator/health
+curl -i http://localhost:3000/
+```
 
-# Apply infrastructure substrate (Minikube target)
-terraform apply
+To clean up all containers and persistent volumes:
+```bash
+docker compose down -v
 ```
 
 ---
 
 ## Containerization & Security Posture
 
-- **Multi-Stage Build Isolation:** Compilation, testing, and packaging execute inside a temporary Maven/JDK build stage. Build-time tools and source files are discarded prior to packaging the final runtime layer.
-- **Minimalist Base Image:** The runtime stage leverages a stripped `eclipse-temurin:21-jre-alpine` footprint, minimizing attack surface area and dependencies.
-- **Rootless Execution:** The application executes under an explicit unprivileged system user (`appuser`, UID 10001) instead of root, enforcing least-privilege security boundaries against container escape vulnerabilities.
-- **Automated Security Gate (Trivy):** Every pipeline run performs an automated vulnerability scan. Detection of unpatched `HIGH` or `CRITICAL` CVEs halts the conveyor belt immediately before publishing.
-
----
-
-## Local Runtime Orchestration
-
-Spin up and verify the entire containerized platform stack locally:
-
-```bash
-# 1. Clone this platform repository
-git clone https://github.com/brunomdleal/platform-delivery-engine.git
-cd platform-delivery-engine
-
-# 2. Provision local Kubernetes substrate & generate .env
-cd terraform/environments/local
-terraform init && terraform apply -auto-approve
-cd ../../..
-
-# 3. Launch containerized stack via Docker Compose
-docker compose up -d --build
-
-# 4. Verify health probe response
-curl -i http://localhost:8080/actuator/health
-```
-
----
-
-## Multi-Environment Deployment Specification
-
-| Dimension               | Dev Environment (`namespace: dev`)     | Prod Environment (`namespace: prod`)      |
-|-------------------------|----------------------------------------|-------------------------------------------|
-| **Provisioning Engine** | Terraform (`k8s_platform` module)      | Terraform (`k8s_platform` module)         |
-| **Replication**         | 1 Pod (cost-optimized)                 | 3 Pods (zero downtime, high availability) |
-| **Traffic Ingress**     | ClusterIP (internal network only)      | LoadBalancer (managed public gateway)     |
-| **CPU / Memory Limits** | 250m CPU / 256Mi RAM                   | 1000m CPU / 1Gi RAM                       |
-| **Telemetry Probes**    | Liveness probe enabled                 | Liveness + Readiness probes enabled       |
-| **Failure Policy**      | Automatic container restart on failure | Automatic restart + load shedding         |
+* **Unprivileged Non-Root Execution:** All containers run under explicit, unprivileged system users (`appuser:1000` for backend, `nginx:101` for web client) with `readOnlyRootFilesystem: true` and dropped capabilities (`drop: [ALL]`).
+* **Multi-Stage Build Isolation:** Build tools (Maven, Vite, Node.js) are completely discarded from the final lightweight Alpine runtime images.
+* **Ephemeral Volumes:** Transient write paths (`/tmp`, `/var/cache/nginx`, `/var/run`) are backed by ephemeral in-memory `emptyDir` volumes to enforce container immutability.
+* **Shift-Left Vulnerability Audits:** CI workflows enforce Aqua Security Trivy audits, halting image publishing if unpatched `HIGH` or `CRITICAL` vulnerabilities are detected.
 
 ---
 
@@ -124,31 +155,39 @@ curl -i http://localhost:8080/actuator/health
 ```text
 platform-delivery-engine/
 ├── .github/
-│   └── workflows/
-│       └── delivery.yml          # Automated CI/CD pipeline & security gates
-├── docker/
-│   ├── Dockerfile                # Production-grade multi-stage container build
-│   └── .dockerignore             # Context optimization
+│   └── workflows/                # Automated CI/CD pipelines & release automation
+├── docker-compose.yml            # Local developer composition (API, Web, PostgreSQL)
+├── .env.example                  # Environment template for local runs
 ├── k8s/
-│   ├── dev/                      # Declarative dev manifests
-│   └── prod/                     # High-availability prod manifests
+│   ├── base/                     # Environment-agnostic declarative manifests
+│   │   ├── deployment.yaml       # Base order-service Deployment
+│   │   ├── service.yaml          # Base order-service ClusterIP Service
+│   │   ├── ingress.yaml          # Edge Nginx Ingress routing (/ and /api)
+│   │   ├── order-web-client-deployment.yaml
+│   │   ├── order-web-client-service.yaml
+│   │   ├── postgres-deployment.yaml
+│   │   ├── postgres-pvc.yaml
+│   │   ├── postgres-service.yaml
+│   │   └── kustomization.yaml    # Base bundle composition
+│   └── overlays/
+│       ├── dev/                  # Development environment patches (1 replica, lean limits)
+│       │   ├── deployment-patch.yaml
+│       │   └── kustomization.yaml
+│       └── prod/                 # Production environment patches (HA, anti-affinity, quotas)
+│           ├── deployment-patch.yaml
+│           └── kustomization.yaml
 ├── terraform/
-│   ├── modules/
-│   │   └── k8s_platform/         # Reusable substrate module (namespaces, secrets)
-│   └── environments/
-│       ├── local/                # Minikube context & local .env synthesis
-│       └── cloud/                # Cloud substrate scaffold (remote backend)
-├── docker-compose.yml            # Local orchestration setup
+│   ├── environments/
+│   │   ├── local/                # Minikube Terraform state, provider config & .env sync
+│   │   └── cloud/                # Scaffolding for cloud targets & remote state
+│   └── modules/
+│       └── k8s_platform/         # Reusable module: namespaces, secrets, and credentials
 └── README.md
-
 ```
 
 ---
 
 ## Author
-
-**Bruno Leal**
-
-*Platform & DevOps Tooling Engineer*
-
+**Bruno Leal**  
+*Platform & DevOps Tooling Engineer*  
 [LinkedIn](https://linkedin.com/in/bruno-m-d-leal) • [GitHub](https://github.com/brunomdleal)
