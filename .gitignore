@@ -10,6 +10,9 @@ target/
 dist/
 !.github
 
+# CLI tool
+cli/bin/
+
 # Terraform local state and plugin caches
 **/.terraform/
 *.tfstate
