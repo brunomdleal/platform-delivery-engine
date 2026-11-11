@@ -56,10 +56,15 @@ func installAcrossSiblings() error {
 		return err
 	}
 
-	// Assuming standard portfolio layout where repos share a common parent
-	parentDir := filepath.Dir(wd)
-	if filepath.Base(wd) == "cli" {
+	// Determine Portfolio parent directory dynamically
+	var parentDir string
+	if filepath.Base(wd) == "Portfolio" {
+		parentDir = wd
+	} else if filepath.Base(wd) == "cli" {
 		parentDir = filepath.Dir(filepath.Dir(wd))
+	} else {
+		// Inside a repo like /mnt/D/Projects/Portfolio/platform-delivery-engine
+		parentDir = filepath.Dir(wd)
 	}
 
 	siblingRepos := []string{
