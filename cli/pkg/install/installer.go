@@ -9,6 +9,9 @@ import (
 )
 
 const PrePushHookScript = `#!/usr/bin/env bash
+# Ensure common user-space and system bin paths are present for GUI git clients
+export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
+
 echo "🛡️  Running pde pre-flight verification gate..."
 pde pre-flight
 if [ $? -ne 0 ]; then
