@@ -15,9 +15,17 @@ type CheckResult struct {
 	Status      Status
 	Details     string
 	Remediation string
+	AutoHealed  bool
 }
 
 // Checker defines the interface for running a diagnostic check
 type Checker interface {
 	Run() CheckResult
+}
+
+// Healer defines an optional self-healing contract for a diagnostic check
+type Healer interface {
+	Checker
+	// Heal attempts a one-time automated repair (start daemon, pull image, start cluster, etc.)
+	Heal() error
 }

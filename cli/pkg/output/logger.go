@@ -11,37 +11,45 @@ var (
 	yellow = color.New(color.FgYellow, color.Bold).SprintFunc()
 	red    = color.New(color.FgRed, color.Bold).SprintFunc()
 	cyan   = color.New(color.FgCyan, color.Bold).SprintFunc()
+	blue   = color.New(color.FgBlue, color.Bold).SprintfFunc()
 	bold   = color.New(color.Bold).SprintFunc()
 )
 
+var spacing = 21
+
 // Info Prints logs with a cyan-badged
 func Info(format string, a ...interface{}) {
-	fmt.Printf("%s %s\n", cyan("[INFO]"), fmt.Sprintf(format, a...))
+	fmt.Printf("%*s %s\n", spacing, cyan("[INFO]"), fmt.Sprintf(format, a...))
 }
 
-// Success Prints logs with a cyan-badged
+// Success Prints logs with a green-badged
 func Success(format string, a ...interface{}) {
-	fmt.Printf("%s %s\n", green("[✓]"), fmt.Sprintf(format, a...))
+	fmt.Printf("%*s %s\n", spacing, green("[✓]"), fmt.Sprintf(format, a...))
 }
 
-// Warn Prints logs with a cyan-badged
+// Warn Prints logs with a yellow-badged
 func Warn(format string, a ...interface{}) {
-	fmt.Printf("%s %s\n", yellow("[!]"), fmt.Sprintf(format, a...))
+	fmt.Printf("%*s %s\n", spacing, yellow("[!]"), fmt.Sprintf(format, a...))
 }
 
-// Error Prints logs with a cyan-badged
+// Error Prints logs with a red-badged
 func Error(format string, a ...interface{}) {
-	fmt.Printf("%s %s\n", yellow("[ERROR]"), fmt.Sprintf(format, a...))
+	fmt.Printf("%*s %s\n", spacing, red("[ERROR]"), fmt.Sprintf(format, a...))
 }
 
 // Header Prints a formatted section banner
 func Header(title string) {
 	fmt.Println()
-	fmt.Printf("%s %s\n", cyan("==>"), bold(title))
+	fmt.Printf("%*s %s\n", spacing, cyan("==>"), bold(title))
 }
 
 // Version Prints the tool version
 func Version(title string) {
 	fmt.Println()
 	fmt.Printf("%s %s\n", "pde", bold(title))
+}
+
+// Directory Prints the directory with a blue-badged
+func Directory(format string, a ...interface{}) {
+	fmt.Printf("%*s %s\n", spacing, blue("[DIR]"), fmt.Sprintf(format, a...))
 }

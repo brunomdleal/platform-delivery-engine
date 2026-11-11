@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/brunomdleal/platform-delivery-engine/cli/pkg/output"
 )
 
 // DockerSocketChecker verifies /var/run/docker.sock connectivity
@@ -18,12 +20,18 @@ func (c *DockerSocketChecker) Run() CheckResult {
 	socketPath := "/var/run/docker.sock"
 	conn, err := net.DialTimeout("unix", socketPath, 1*time.Second)
 	if err != nil {
-		return CheckResult{
-			Name:        "Docker Daemon",
-			Status:      StatusFail,
-			Details:     fmt.Sprintf("Cannot connect to %s", socketPath),
-			Remediation: "Ensure Docker is installed and running (`sudo systemctl start docker`)",
+		output.Warn("Docker is not instantiated. Running command: sudo systemctl start docker")
+		exec.Command("sudo systemctl", "start", "docker")
+		conn2, err2 := net.DialTimeout("unix", socketPath, 5*time.Second)
+		if err2 != nil {
+			return CheckResult{
+				Name:        "Docker Daemon",
+				Status:      StatusFail,
+				Details:     fmt.Sprintf("Cannot connect to %s", socketPath),
+				Remediation: "Ensure Docker is installed and running.  (`sudo systemctl start docker`)",
+			}
 		}
+		_ = conn2.Close()
 	}
 	_ = conn.Close()
 
@@ -32,6 +40,15 @@ func (c *DockerSocketChecker) Run() CheckResult {
 		Status:  StatusOK,
 		Details: fmt.Sprintf("Active & listening on %s", socketPath),
 	}
+}
+
+func (c *DockerSocketChecker) Heal() error {
+	cmd := exec.Command("sudo", "systemctl", "start", "docker")
+	if err := cmd.Run(); err != nil {
+		// Fallback for non-systemd or alternative WSL inits
+		return exec.Command("sudo", "service", "docker", "start").Run()
+	}
+	return nil
 }
 
 // DockerComposeChecker checks docker compose plugin/binary
@@ -257,6 +274,11 @@ func (c *MinikubeChecker) Run() CheckResult {
 	}
 }
 
+func (c *MinikubeChecker) Heal() error {
+	cmd := exec.Command("minikube", "start", "--driver=docker", "--ports=8443:8443")
+	return cmd.Run()
+}
+
 // KubernetesClusterChecker verifies connectivity to the cluster control plane and node readiness
 type KubernetesClusterChecker struct {
 	Timeout time.Duration
@@ -392,4 +414,10 @@ func (c *TrivyChecker) Run() CheckResult {
 		Status:  StatusOK,
 		Details: strings.TrimSpace(firstLine),
 	}
+}
+
+func (c *TrivyChecker) Heal() error {
+	// Pre-cache container fallback so preflight can scan without latency
+	cmd := exec.Command("docker", "pull", "aquasec/trivy:latest")
+	return cmd.Run()
 }
