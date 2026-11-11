@@ -7,9 +7,10 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "pde",
-	Short: "pde - Developer Experience (DevEx) & Platform Delivery CLI",
-	Long:  "A unified platform engineering CLI tool to inspect repository context, validate toolchains, and mirror CI quality gates locally.",
+	Use:     "pde",
+	Short:   "pde - Developer Experience (DevEx) & Platform Delivery CLI",
+	Long:    "A unified platform engineering CLI tool to inspect repository context, validate toolchains, and mirror CI quality gates locally.",
+	Version: "0.0.1",
 }
 
 // Execute runs the root command entrypoint
