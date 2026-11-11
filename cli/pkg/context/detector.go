@@ -11,7 +11,7 @@ import (
 // Detect inspects a directory path and identifies the repository context
 func Detect(dirPath string) (*RepoContext, error) {
 	absPath, err := filepath.Abs(dirPath)
-	output.Info(absPath)
+	output.Directory("%s", absPath)
 	if err != nil {
 		return nil, err
 	}
