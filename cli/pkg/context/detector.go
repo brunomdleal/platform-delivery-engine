@@ -17,6 +17,7 @@ func Detect(dirPath string) (*RepoContext, error) {
 	}
 
 	//	check for platform-delivery-engine
+	output.Info("Checking for platform-delivery-engine")
 	if exists(filepath.Join(absPath, "k8s")) && exists(filepath.Join(absPath, "terraform")) {
 		return &RepoContext{
 			Type:        RepoPlatformDeliveryEngine,
@@ -27,6 +28,7 @@ func Detect(dirPath string) (*RepoContext, error) {
 	}
 
 	// order-web-client
+	output.Info("Checking for order-web-client")
 	if exists(filepath.Join(absPath, "package.json")) {
 		return &RepoContext{
 			Type:        RepoOrderWebClient,
@@ -36,23 +38,26 @@ func Detect(dirPath string) (*RepoContext, error) {
 		}, nil
 	}
 
-	//	check for java maven project
+	// order-service
+	output.Info("Checking for maven projects")
 	pomFilePath := filepath.Join(absPath, "pom.xml")
-	if exists(pomFilePath) && exists(filepath.Join(absPath, "src", "main", "java")) {
+	if exists(pomFilePath) {
+		output.Info("Checking for order-service")
+		if exists(filepath.Join(absPath, "src", "main", "java")) {
+			return &RepoContext{
+				Type:        RepoOrderService,
+				Path:        absPath,
+				Description: "Order Management Core API",
+				Toolchain:   "Java 21 / Maven / Spring Boot",
+			}, nil
+		}
+
+		// qa-automation
+		output.Info("Checking for qa-automation")
 		pomContent, err := os.ReadFile(pomFilePath)
 		if err == nil {
 			pomContentStr := string(pomContent)
-			//	check for order-service
-			if strings.Contains(pomContentStr, "order-service") || strings.Contains(pomContentStr, "spring-boot") {
-				return &RepoContext{
-					Type:        RepoOrderService,
-					Path:        absPath,
-					Description: "Order Management Core API",
-					Toolchain:   "Java 21 / Maven / Spring Boot",
-				}, nil
-			}
-			//	check for qa-automation
-			if strings.Contains(pomContentStr, "qa-automation") || strings.Contains(pomContentStr, "rest-assured") {
+			if strings.Contains(pomContentStr, "qa-automation") || strings.Contains(pomContentStr, "atf-") {
 				return &RepoContext{
 					Type:        RepoQAAutomation,
 					Path:        absPath,
@@ -60,9 +65,7 @@ func Detect(dirPath string) (*RepoContext, error) {
 					Toolchain:   "Java 21 / Maven / REST-Assured",
 				}, nil
 			}
-
 		}
-
 	}
 
 	return &RepoContext{
