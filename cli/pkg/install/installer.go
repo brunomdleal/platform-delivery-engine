@@ -13,19 +13,14 @@ const PrePushHookScript = `#!/usr/bin/env bash
 export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
 
 echo "🛡️  Running pde pre-flight verification gate..."
-pde pre-flight
-if [ $? -ne 0 ]; then
-  echo "⚠️  Pre-flight failed. Attempting 1-time self-healing via 'pde doctor'..."
-  pde doctor
-  if [ $? -eq 0 ]; then
-    echo "🔄 Re-running 'pde pre-flight' after self-healing..."
-    pde pre-flight
-  fi
-fi
-
-if [ $? -ne 0 ]; then
-  echo "❌ Pre-flight check failed! Push aborted."
-  exit 1
+if ! pde pre-flight; then
+	echo "⚠️  Pre-flight failed. Attempting 1-time self-healing via 'pde doctor'..."
+	pde doctor
+	echo "🔄 Re-running 'pde pre-flight' after self-healing..."
+	if ! pde pre-flight; then
+		echo "❌ Pre-flight check failed! Push aborted."
+		exit 1
+	fi
 fi
 `
 
